@@ -1,0 +1,90 @@
+import tkinter as tk
+import winsound  # Para som (apenas em Windows)
+
+class JogoDaVelha:
+    def __init__(self, master):
+        self.master = master
+        self.master.title("Jogo da Velha")
+        self.master.attributes('-fullscreen', True)
+        self.master.bind("<Escape>", self.sair_fullscreen)
+
+        self.canvas = tk.Canvas(self.master, bg="#add8e6")
+        self.canvas.pack(fill="both", expand=True)
+
+        self.pontos = {"X": 0, "O": 0}
+        self.jogador_atual = "X"
+        self.botao = [[None for _ in range(3)] for _ in range(3)]
+
+        self.frame = tk.Frame(self.canvas, bg="#add8e6")
+        self.frame.place(relx=0.5, rely=0.5, anchor='center')
+
+        self.criar_botoes()
+        self.criar_pontos()
+        self.indicador_jogador()
+
+    def sair_fullscreen(self, event):
+        self.master.attributes('-fullscreen', False)
+
+    def criar_botoes(self):
+        for i in range(3):
+            for j in range(3):
+                self.botao[i][j] = tk.Button(self.frame, text="", font=("Arial", 60), width=4, height=2,
+                                             command=lambda i=i, j=j: self.jogar(i, j))
+                self.botao[i][j].grid(row=i, column=j, padx=5, pady=5)
+
+    def criar_pontos(self):
+        self.pontos_label = tk.Label(self.canvas, text=f"X: {self.pontos['X']}   O: {self.pontos['O']}", 
+                                      font=("Arial", 30), bg="#add8e6")
+        self.pontos_label.pack(pady=20)
+
+    def indicador_jogador(self):
+        self.indicador = tk.Label(self.canvas, text=f"Turno: {self.jogador_atual}", font=("Arial", 30), bg="#add8e6")
+        self.indicador.pack(pady=10)
+
+    def jogar(self, i, j):
+        if self.botao[i][j]["text"] == "" and self.verificar_vencedor() is None:
+            self.botao[i][j]["text"] = self.jogador_atual
+            self.botao[i][j].config(fg="red" if self.jogador_atual == "X" else "blue")
+            self.tocar_som()
+
+            vencedor = self.verificar_vencedor()
+            if vencedor is not None:
+                self.pontos[vencedor] += 1
+                self.pontos_label.config(text=f"X: {self.pontos['X']}   O: {self.pontos['O']}")
+                self.indicador.config(text=f"{vencedor} ganhou!")
+                self.master.after(2000, self.reiniciar_jogo)  # Espera 2 segundos antes de reiniciar
+            elif all(self.botao[i][j]["text"] != "" for i in range(3) for j in range(3)):
+                self.indicador.config(text="Empate!")
+                self.master.after(2000, self.reiniciar_jogo)  # Espera 2 segundos antes de reiniciar
+            else:
+                self.jogador_atual = "O" if self.jogador_atual == "X" else "X"
+                self.indicador.config(text=f"Turno: {self.jogador_atual}")
+
+    def tocar_som(self):
+        # Tocar um som (apenas em Windows)
+        winsound.Beep(1000, 200)
+
+    def verificar_vencedor(self):
+        for i in range(3):
+            if self.botao[i][0]["text"] == self.botao[i][1]["text"] == self.botao[i][2]["text"] != "":
+                return self.botao[i][0]["text"]
+            if self.botao[0][i]["text"] == self.botao[1][i]["text"] == self.botao[2][i]["text"] != "":
+                return self.botao[0][i]["text"]
+        if self.botao[0][0]["text"] == self.botao[1][1]["text"] == self.botao[2][2]["text"] != "":
+            return self.botao[0][0]["text"]
+        if self.botao[0][2]["text"] == self.botao[1][1]["text"] == self.botao[2][0]["text"] != "":
+            return self.botao[0][2]["text"]
+        return None
+
+    def reiniciar_jogo(self):
+        for i in range(3):
+            for j in range(3):
+                self.botao[i][j]["text"] = ""
+                self.botao[i][j].config(fg="black")
+        self.jogador_atual = "X"
+        self.indicador.config(text=f"Turno: {self.jogador_atual}")
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    jogo = JogoDaVelha(root)
+    root.mainloop()
