@@ -1,0 +1,102 @@
+import tkinter as tk
+from tkinter import scrolledtext, messagebox
+import re
+from datetime import datetime, timedelta
+
+# Dicionário para armazenar senhas e suas informações
+passwords_data = {}
+MAX_RECENT_PASSWORDS = 10
+
+# Função para validar a senha
+def validate_password(password):
+    # Verifica as regras
+    if (len(password) < 12 or
+        not re.search(r"[A-Z]", password) or  # Letra maiúscula
+        not re.search(r"[a-z]", password) or  # Letra minúscula
+        not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password) or  # Caractere especial
+        re.search(r"(\d)\1{2,}", password) or  # Sequências numéricas (ex. 111)
+        re.search(r"(.)\1{2,}", password) or  # Sequências de caracteres (ex. aaa)
+        any(word in password for word in ["senha", "palavra", "data"])  # Nomes ou palavras
+    ):
+        return False
+    return True
+
+# Função para cadastrar uma nova senha
+def register_password():
+    key = entry_key.get().strip()
+    password = entry_password.get().strip()
+
+    # Verifica se a chave não está vazia
+    if not key:
+        messagebox.showwarning("Aviso", "A chave não pode estar vazia.")
+        return
+
+    # Verifica a validade da nova senha
+    if not validate_password(password):
+        messagebox.showwarning("Aviso", "A senha não atende aos requisitos.")
+        return
+
+    # Verifica se a senha foi reutilizada
+    if key in passwords_data and password in passwords_data[key]['recent_passwords']:
+        messagebox.showwarning("Aviso", "Essa senha foi utilizada recentemente. Por favor, use outra.")
+        return
+
+    # Cadastra a nova senha
+    expiry_date = datetime.now() + timedelta(days=90)
+    
+    # Se a chave já existir, atualiza as informações
+    if key in passwords_data:
+        passwords_data[key]['expiry_date'] = expiry_date
+        passwords_data[key]['recent_passwords'].append(password)
+        if len(passwords_data[key]['recent_passwords']) > MAX_RECENT_PASSWORDS:
+            passwords_data[key]['recent_passwords'].pop(0)  # Mantém apenas as últimas 10 senhas
+    else:
+        passwords_data[key] = {
+            'password': password,
+            'expiry_date': expiry_date,
+            'recent_passwords': [password]
+        }
+
+    messagebox.showinfo("Sucesso", f"Senha cadastrada com sucesso para a chave '{key}'.")
+
+# Função para exibir as senhas cadastradas
+def show_passwords():
+    display_area.config(state=tk.NORMAL)
+    display_area.delete(1.0, tk.END)  # Limpa a área de exibição
+    for key, data in passwords_data.items():
+        display_area.insert(tk.END, f"Chave: {key}\n")
+        display_area.insert(tk.END, f"Senha: {data['password']}\n")
+        display_area.insert(tk.END, f"Data de Expiração: {data['expiry_date'].strftime('%Y-%m-%d')}\n")
+        display_area.insert(tk.END, "-----------------------------------\n")
+    display_area.config(state=tk.DISABLED)
+
+# Criar a janela principal
+root = tk.Tk()
+root.title("Cadastro de Senhas")
+
+# Criar o rótulo e entrada para a chave
+label_key = tk.Label(root, text="Chave:")
+label_key.pack(pady=5)
+entry_key = tk.Entry(root, width=30)
+entry_key.pack(pady=5)
+
+# Criar o rótulo e entrada para a senha
+label_password = tk.Label(root, text="Senha:")
+label_password.pack(pady=5)
+entry_password = tk.Entry(root, show="*", width=30)
+entry_password.pack(pady=5)
+
+# Criar o botão "Cadastrar"
+btn_register = tk.Button(root, text="Cadastrar Senha", command=register_password)
+btn_register.pack(pady=10)
+
+# Criar o botão "Mostrar Senhas"
+btn_show = tk.Button(root, text="Mostrar Senhas Cadastradas", command=show_passwords)
+btn_show.pack(pady=10)
+
+# Criar a área de exibição de senhas
+display_area = scrolledtext.ScrolledText(root, wrap=tk.WORD, state=tk.DISABLED, width=50, height=10)
+display_area.pack(pady=10)
+
+# Iniciar o loop principal da interface
+root.mainloop()
